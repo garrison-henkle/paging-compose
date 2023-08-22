@@ -1,6 +1,6 @@
 # Paging Compose
-A simple paging library for Jetpack Compose and Compose Multiplatform. This was hacked together at
-10pm, so expect small bugs :).
+A simple paging library for Jetpack Compose and Compose Multiplatform. This was hacked together in
+the middle of the night, so expect small bugs :).
 
 Example usage:
 ```kotlin
