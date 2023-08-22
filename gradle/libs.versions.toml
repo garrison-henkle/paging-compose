@@ -1,7 +1,6 @@
 [versions]
 androidPlugin = "7.4.2"
 androidx = "1.7.2"
-androidxAppCompat = "1.6.1"
 androidxCoreKtx = "1.10.1"
 androidxLifecycle = "2.6.1"
 compose = "1.4.3"
@@ -11,7 +10,6 @@ kotlinxCoroutines = "1.7.3"
 
 [libraries]
 androidxActivityCompose = { module = "androidx.activity:activity-compose", version.ref = "androidx" }
-androidxAppCompat = { module = "androidx.appcompat:appcompat", version.ref = "androidxAppCompat" }
 androidxCoreKtx = { module = "androidx.core:core-ktx", version.ref = "androidxCoreKtx" }
 androidxLifecycleRuntime = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "androidxLifecycle" }
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
