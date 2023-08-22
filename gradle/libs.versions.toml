@@ -1,0 +1,25 @@
+[versions]
+androidPlugin = "7.4.2"
+androidx = "1.7.2"
+androidxAppCompat = "1.6.1"
+androidxCoreKtx = "1.10.1"
+androidxLifecycle = "2.6.1"
+compose = "1.4.3"
+kermit = "2.0.0-RC5"
+kotlin = "1.9.0"
+kotlinxCoroutines = "1.7.3"
+
+[libraries]
+androidxActivityCompose = { module = "androidx.activity:activity-compose", version.ref = "androidx" }
+androidxAppCompat = { module = "androidx.appcompat:appcompat", version.ref = "androidxAppCompat" }
+androidxCoreKtx = { module = "androidx.core:core-ktx", version.ref = "androidxCoreKtx" }
+androidxLifecycleRuntime = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "androidxLifecycle" }
+kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
+kotlinxCoroutinesCore = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+
+[plugins]
+androidApplication = { id = "com.android.application", version.ref = "androidPlugin" }
+androidLibrary = { id = "com.android.library", version.ref = "androidPlugin" }
+composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "compose" }
+kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
