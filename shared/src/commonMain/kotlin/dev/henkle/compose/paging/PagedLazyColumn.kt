@@ -28,6 +28,32 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
+/**
+ * A [LazyColumn] that pages data fetched via [fetch].
+ *
+ * @param pageSize The size of each loaded page.
+ * @param maxPages The maximum number of pages to keep loaded at a time. If the max count is
+ * exceeded, a page on the opposite side of the list will be removed i.e. adding a page to the end
+ * of the list will trigger the removal of a page at the beginning.
+ * @param initialPagePreloadCount The number of pages to preload on initialization. This applies to
+ * both directions relative to the [startPage].
+ * @param startPage The page to start on.
+ * @param loadThreshold The item threshold from the end of the list at which more data will be
+ * loaded. Defaults to a percent threshold via [loadThresholdPercent] when null.
+ * @param loadThresholdPercent The item threshold from the end of the list at which more data will
+ * be loaded, expressed as a percentage of the page size.
+ * @param loadingCirclesEnabled Determines if loading circles will appear when pages are loading.
+ * @param loadingCircleColor The color of any loading circles.
+ * @param loadingCircleSize The size (diameter) of any loading circles.
+ * @param loadingCircleStrokeWidth The width of the loading circles' stroke.
+ * @param key A function that will generate a unique key value for a given item. The key should be
+ * a type that can be stored in an Android bundle.
+ * @param fetch A suspending function that will fetch new data for the pager given an offset and
+ * count (pageSize). The datasource should return as much data as it can, even if it cannot fill a
+ * page. If the datasource is unable to fetch any data at the given offset, it should return an
+ * empty list.
+ * @param content The Composable content to display for each item in the list.
+ */
 @Composable
 fun <T> PagedLazyColumn(
     modifier: Modifier,

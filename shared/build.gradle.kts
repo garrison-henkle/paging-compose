@@ -43,7 +43,6 @@ kotlin {
                 implementation(compose.foundation)
                 implementation(compose.material)
                 implementation(compose.runtime)
-                implementation(libs.kermit)
                 implementation(libs.kotlinxCoroutinesCore)
             }
         }
