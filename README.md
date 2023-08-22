@@ -15,7 +15,7 @@ PagedLazyColumn(
 }
 ```
 
-Other than `PagedLazyColumn`, there are also some lower-level tools that provide lower-level access
+Other than `PagedLazyColumn`, there are also some lower-level tools that provide access
 to the paging implementation. These include:
 - `PagerAdapter` - The paging implementation class
 - `rememberPager()` - A utility function to create a `PagerAdapter` in a Composable
