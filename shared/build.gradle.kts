@@ -33,6 +33,7 @@ kotlin {
     ).forEach {
         it.binaries.framework {
             baseName = getConfigString("package.name.ios")
+            isStatic = true
         }
     }
 
