@@ -21,19 +21,6 @@ typealias PageNumber = Int
  * @property pageSize The size of each page.
  * @property data The data to present
  * @property state The current state of paging operations
- *
- * @param pageSize The size of each page.
- * @param maxPages The maximum number of pages to keep loaded at once. If the max count is exceeded,
- * a page on the opposite side of the list will be removed i.e. adding a page to the end of the list
- * will trigger the removal of a page at the beginning.
- * @param pagePreloadCount The number of pages to preload on initialization. This applies to both
- * directions relative to the [startPage].
- * @param startPage The page to start on.
- * @param scope A scope for the pager to run jobs in.
- * @param fetch A function that fetches data from the datasource at the provided offset with a
- * given [pageSize]. The datasource should return as much data as it can, even if it cannot fill a
- * page. If the datasource is unable to fetch any data at the given offset, is should return an
- * empty list.
  */
 interface PagerAdapter<T> {
     val pageSize: Int
@@ -66,12 +53,15 @@ internal abstract class BasePagerAdapter<T, P : Page<T>>(
     pagePreloadCount: Int,
     private val scope: CoroutineScope,
 ) : PagerAdapter<T> {
-    protected val actorChannel = Channel<PagerAction>(capacity = 10)
-    protected val actor: SendChannel<PagerAction> = actorChannel
+    private val actorChannel = Channel<PagerAction>(capacity = 10)
+    private val actor: SendChannel<PagerAction> = actorChannel
 
     protected val pages = MutableStateFlow<List<P>>(emptyList())
-    protected val _data = MutableStateFlow<List<T>>(emptyList())
+
+    private val _data = MutableStateFlow<List<T>>(emptyList())
     override val data = _data.asStateFlow()
+
+    @Suppress("ktlint:standard:property-naming")
     protected val _state = MutableStateFlow<PagerState>(PagerState.Idle)
     override val state = _state.asStateFlow()
 
@@ -143,6 +133,23 @@ internal abstract class BasePagerAdapter<T, P : Page<T>>(
     abstract suspend fun loadPageAtEnd(page: Int)
 }
 
+/**
+ * Pager that uses ids and counts to retrieve more data
+ *
+ * @param pageSize The size of each page.
+ * @param maxPages The maximum number of pages to keep loaded at once. If the max count is exceeded,
+ * a page on the opposite side of the list will be removed i.e. adding a page to the end of the list
+ * will trigger the removal of a page at the beginning.
+ * @param pagePreloadCount The number of pages to preload on initialization. This applies to both
+ * directions relative to the [startPage].
+ * @param startPage The page to start on.
+ * @param scope A scope for the pager to run jobs in.
+ * @param getID A function to retrieve an ID for a given item
+ * @param fetch A function that fetches data from the datasource following the last ID provided with
+ * a given [pageSize]. The datasource should return as much data as it can, even if it cannot fill a
+ * page. If the datasource is unable to fetch any data following an ID, is should return an empty
+ * list.
+ */
 @Suppress("UnnecessaryVariable")
 internal class IDPagerAdapter<T>(
     override val pageSize: Int = 50,
@@ -164,7 +171,12 @@ internal class IDPagerAdapter<T>(
 
         cache[page]?.also { cachedPage ->
             val newPageData = fetch(cachedPage.previousPageLastID, pageSize)
-            currentPages += Page.IDPage(page = page, previousPageLastID = cachedPage.previousPageLastID, size = pageSize, data = newPageData)
+            currentPages +=
+                Page.IDPage(
+                    page = page,
+                    previousPageLastID = cachedPage.previousPageLastID,
+                    size = pageSize, data = newPageData,
+                )
             cachedPage.setIds(ids = newPageData.map(getID))
 
             if (currentPages.size >= maxPages) {
@@ -265,6 +277,22 @@ internal class IDPagerAdapter<T>(
     }
 }
 
+/**
+ * Pager that uses offsets and counts to retrieve more data
+ *
+ * @param pageSize The size of each page.
+ * @param maxPages The maximum number of pages to keep loaded at once. If the max count is exceeded,
+ * a page on the opposite side of the list will be removed i.e. adding a page to the end of the list
+ * will trigger the removal of a page at the beginning.
+ * @param pagePreloadCount The number of pages to preload on initialization. This applies to both
+ * directions relative to the [startPage].
+ * @param startPage The page to start on.
+ * @param scope A scope for the pager to run jobs in.
+ * @param fetch A function that fetches data from the datasource at the provided offset with a
+ * given [pageSize]. The datasource should return as much data as it can, even if it cannot fill a
+ * page. If the datasource is unable to fetch any data at the given offset, is should return an
+ * empty list.
+ */
 internal class OffsetPagerAdapter<T>(
     override val pageSize: Int = 50,
     private val maxPages: Int = 9,

@@ -11,7 +11,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
-import co.touchlab.kermit.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -22,22 +21,54 @@ fun <T> rememberPager(
     pageSize: Int = 50,
     maxPages: Int = 9,
     initialPagePreloadCount: Int = 2,
-    startPage: Int = 0,
-    fetch: suspend (offset: Int, pageSize: Int) -> List<T>,
-): PagerAdapter<T>{
-    val scope = rememberCoroutineScope{ Dispatchers.Default }
-    val pager = remember{
-        PagerAdapter(
-            pageSize = pageSize,
-            maxPages = maxPages,
-            pagePreloadCount = initialPagePreloadCount,
-            startPage = startPage,
-            scope = scope,
-            fetch = fetch,
-        )
+    thoroughSafetyCheck: Boolean = false,
+    getID: (T) -> String,
+    fetch: suspend (lastID: String?, pageSize: Int) -> List<T>,
+): PagerAdapter<T> {
+    val scope = rememberCoroutineScope { Dispatchers.Default }
+    val pager =
+        remember {
+            IDPagerAdapter(
+                pageSize = pageSize,
+                maxPages = maxPages,
+                pagePreloadCount = initialPagePreloadCount,
+                scope = scope,
+                enableThoroughSafetyCheck = thoroughSafetyCheck,
+                getID = getID,
+                fetch = fetch,
+            )
+        }
+
+    DisposableEffect(Unit) {
+        pager.startFlows()
+        onDispose { pager.shutdown() }
     }
 
-    DisposableEffect(Unit){
+    return pager
+}
+
+@Composable
+fun <T> rememberPager(
+    pageSize: Int = 50,
+    maxPages: Int = 9,
+    initialPagePreloadCount: Int = 2,
+    startPage: Int = 0,
+    fetch: suspend (offset: Int, pageSize: Int) -> List<T>,
+): PagerAdapter<T> {
+    val scope = rememberCoroutineScope { Dispatchers.Default }
+    val pager =
+        remember {
+            OffsetPagerAdapter(
+                pageSize = pageSize,
+                maxPages = maxPages,
+                pagePreloadCount = initialPagePreloadCount,
+                startPage = startPage,
+                scope = scope,
+                fetch = fetch,
+            )
+        }
+
+    DisposableEffect(Unit) {
         pager.startFlows()
         onDispose { pager.shutdown() }
     }
@@ -51,13 +82,13 @@ fun <T> registerForPagingEvents(
     state: LazyListState,
     loadThreshold: Int? = null,
     loadThresholdPercent: Float = 0.33f,
-){
+) {
     val pagerData by pager.data.collectAsState()
-    LaunchedEffect(state, pager){
+    LaunchedEffect(state, pager) {
         var lastFirstIndex = 0
         snapshotFlow {
             Triple(state.firstVisibleItemIndex, state.layoutInfo.visibleItemsInfo.size, pagerData)
-        }.map{ (first, count, data) ->
+        }.map { (first, count, data) ->
             val scrollingDown = first > lastFirstIndex
             val last = first + count
             val threshold = loadThreshold ?: (loadThresholdPercent * pager.pageSize).roundToInt()
@@ -65,16 +96,15 @@ fun <T> registerForPagingEvents(
             val approachingBottom = scrollingDown && last > (data.size - threshold) && data.size >= pager.pageSize
             lastFirstIndex = first
             approachingTop to approachingBottom
-        }.distinctUntilChanged().collect{ (approachingTop, approachingBottom) ->
-            if(approachingBottom){
+        }.distinctUntilChanged().collect { (approachingTop, approachingBottom) ->
+            if (approachingBottom) {
                 pager.loadNext()
-            } else if(approachingTop){
+            } else if (approachingTop) {
                 pager.loadPrevious()
             }
         }
     }
 }
-
 
 fun <T> Modifier.pagingListener(
     pager: PagerAdapter<T>,
