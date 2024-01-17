@@ -4,12 +4,25 @@ the middle of the night, so expect small bugs :).
 
 Example usage:
 ```kotlin
+// using offset + count
 PagedLazyColumn(
     modifier = Modifier,
     pageSize = 15,
     maxPages = 5,
     key = { it },
     fetch = { offset, pageSize -> repo.get(offset = offset, count = pageSize) },
+){ item ->
+    Text(text = item.toString())
+}
+
+// using last id + count
+PagedLazyColumn(
+    modifier = Modifier,
+    pageSize = 15,
+    maxPages = 5,
+    key = { it },
+    getID = { it },
+    fetch = { lastID, pageSize -> repo.get(lastID = lastID, count = pageSize) },
 ){ item ->
     Text(text = item.toString())
 }

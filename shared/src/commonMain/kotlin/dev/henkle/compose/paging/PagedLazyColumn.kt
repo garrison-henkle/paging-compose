@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.CircularProgressIndicator
@@ -13,8 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -28,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 fun <T> PagedLazyColumn(
     modifier: Modifier,
@@ -44,14 +42,15 @@ fun <T> PagedLazyColumn(
     key: (T) -> Any,
     fetch: suspend (offset: Int, pageSize: Int) -> List<T>,
     content: @Composable LazyItemScope.(item: T) -> Unit,
-){
-    val pager = rememberPager(
-        pageSize = pageSize,
-        initialPagePreloadCount = initialPagePreloadCount,
-        maxPages = maxPages,
-        startPage = startPage,
-        fetch = fetch,
-    )
+) {
+    val pager =
+        rememberPager(
+            pageSize = pageSize,
+            initialPagePreloadCount = initialPagePreloadCount,
+            maxPages = maxPages,
+            startPage = startPage,
+            fetch = fetch,
+        )
     val pagerData by pager.data.collectAsState()
     val pagerState by pager.state.collectAsState()
     val state = rememberLazyListState()
@@ -60,8 +59,8 @@ fun <T> PagedLazyColumn(
         modifier = modifier,
         state = state,
     ) {
-        item(key = PAGER_TOP_LOADING_CIRCLE_KEY){
-            if(loadingCirclesEnabled && pagerState.shouldShowTopLoadingCircle){
+        item(key = PAGER_TOP_LOADING_CIRCLE_KEY) {
+            if (loadingCirclesEnabled && pagerState.shouldShowTopLoadingCircle) {
                 LoadingCircle(
                     color = loadingCircleColor,
                     size = loadingCircleSize,
@@ -72,8 +71,8 @@ fun <T> PagedLazyColumn(
 
         items(items = pagerData, key = key, itemContent = content)
 
-        item(key = PAGER_BOT_LOADING_CIRCLE_KEY){
-            if(loadingCirclesEnabled && pagerState.shouldShowBottomLoadingCircle){
+        item(key = PAGER_BOT_LOADING_CIRCLE_KEY) {
+            if (loadingCirclesEnabled && pagerState.shouldShowBottomLoadingCircle) {
                 LoadingCircle(
                     color = loadingCircleColor,
                     size = loadingCircleSize,
@@ -83,21 +82,21 @@ fun <T> PagedLazyColumn(
         }
     }
 
-    //hacky workaround for a LazyColumn bug/weird behavior. When a new index 0 is inserted when the
-    //LazyColumn is scrolled all the way up, it will jump up to the new index 0. This keeps the
-    //current visible item in place.
+    // hacky workaround for a LazyColumn bug/weird behavior. When a new index 0 is inserted when the
+    // LazyColumn is scrolled all the way up, it will jump up to the new index 0. This keeps the
+    // current visible item in place.
     val density = LocalDensity.current
-    LaunchedEffect(pagerData){
+    LaunchedEffect(pagerData) {
         var lastFirstItem = pagerData.firstOrNull()
         snapshotFlow { pagerData }
             .distinctUntilChanged()
             .map { it.firstOrNull() }
-            .collect{ newFirstItem ->
-                if(lastFirstItem != newFirstItem){
-                    if(!state.canScrollBackward && lastFirstItem != null){
+            .collect { newFirstItem ->
+                if (lastFirstItem != newFirstItem) {
+                    if (!state.canScrollBackward && lastFirstItem != null) {
                         state.scrollToItem(
                             index = pageSize + 1,
-                            scrollOffset = if(loadingCirclesEnabled) -loadingCircleSize.px(density) else 0
+                            scrollOffset = if (loadingCirclesEnabled) -loadingCircleSize.px(density) else 0,
                         )
                     }
                     lastFirstItem = newFirstItem
@@ -113,12 +112,106 @@ fun <T> PagedLazyColumn(
     )
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
-private fun LoadingCircle(color: Color, size: Dp, strokeWidth: Dp){
+fun <T> PagedLazyColumn(
+    modifier: Modifier,
+    pageSize: Int = 25,
+    maxPages: Int = 9,
+    initialPagePreloadCount: Int = 2,
+    thoroughSafetyCheck: Boolean = false,
+    loadThreshold: Int? = null,
+    loadThresholdPercent: Float = 0.33f,
+    loadingCirclesEnabled: Boolean = true,
+    loadingCircleColor: Color = Color.Blue,
+    loadingCircleSize: Dp = 48.dp,
+    loadingCircleStrokeWidth: Dp = 3.dp,
+    key: (T) -> Any,
+    getID: (T) -> String,
+    fetch: suspend (lastID: String?, pageSize: Int) -> List<T>,
+    content: @Composable LazyItemScope.(item: T) -> Unit,
+) {
+    val pager =
+        rememberPager(
+            pageSize = pageSize,
+            initialPagePreloadCount = initialPagePreloadCount,
+            maxPages = maxPages,
+            thoroughSafetyCheck = thoroughSafetyCheck,
+            getID = getID,
+            fetch = fetch,
+        )
+    val pagerData by pager.data.collectAsState()
+    val pagerState by pager.state.collectAsState()
+    val state = rememberLazyListState()
+
+    LazyColumn(
+        modifier = modifier,
+        state = state,
+    ) {
+        item(key = PAGER_TOP_LOADING_CIRCLE_KEY) {
+            if (loadingCirclesEnabled && pagerState.shouldShowTopLoadingCircle) {
+                LoadingCircle(
+                    color = loadingCircleColor,
+                    size = loadingCircleSize,
+                    strokeWidth = loadingCircleStrokeWidth,
+                )
+            }
+        }
+
+        items(items = pagerData, key = key, itemContent = content)
+
+        item(key = PAGER_BOT_LOADING_CIRCLE_KEY) {
+            if (loadingCirclesEnabled && pagerState.shouldShowBottomLoadingCircle) {
+                LoadingCircle(
+                    color = loadingCircleColor,
+                    size = loadingCircleSize,
+                    strokeWidth = loadingCircleStrokeWidth,
+                )
+            }
+        }
+    }
+
+    // hacky workaround for a LazyColumn bug/weird behavior. When a new index 0 is inserted when the
+    // LazyColumn is scrolled all the way up, it will jump up to the new index 0. This keeps the
+    // current visible item in place.
+    val density = LocalDensity.current
+    LaunchedEffect(pagerData) {
+        var lastFirstItem = pagerData.firstOrNull()
+        snapshotFlow { pagerData }
+            .distinctUntilChanged()
+            .map { it.firstOrNull() }
+            .collect { newFirstItem ->
+                if (lastFirstItem != newFirstItem) {
+                    if (!state.canScrollBackward && lastFirstItem != null) {
+                        state.scrollToItem(
+                            index = pageSize + 1,
+                            scrollOffset = if (loadingCirclesEnabled) -loadingCircleSize.px(density) else 0,
+                        )
+                    }
+                    lastFirstItem = newFirstItem
+                }
+            }
+    }
+
+    registerForPagingEvents(
+        pager = pager,
+        state = state,
+        loadThreshold = loadThreshold,
+        loadThresholdPercent = loadThresholdPercent,
+    )
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun LoadingCircle(
+    color: Color,
+    size: Dp,
+    strokeWidth: Dp,
+) {
     Box(
         modifier = Modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center,
-    ){
+    ) {
         CircularProgressIndicator(
             modifier = Modifier.size(size),
             color = color,
@@ -131,10 +224,10 @@ private fun LoadingCircle(color: Color, size: Dp, strokeWidth: Dp){
 private const val PAGER_TOP_LOADING_CIRCLE_KEY = "pagerTopLoadingCircleKey"
 private const val PAGER_BOT_LOADING_CIRCLE_KEY = "pagerBotLoadingCircleKey"
 
-private fun Dp.px(density: Density): Int = with(density){ roundToPx() }
+private fun Dp.px(density: Density): Int = with(density) { roundToPx() }
 
-private val PagerAdapter.PagerState.shouldShowTopLoadingCircle: Boolean get() =
-    this is PagerAdapter.PagerState.LoadingAtStart
+private val PagerState.shouldShowTopLoadingCircle: Boolean get() =
+    this is PagerState.LoadingAtStart
 
-private val PagerAdapter.PagerState.shouldShowBottomLoadingCircle: Boolean get() =
-    this is PagerAdapter.PagerState.LoadingAtEnd || this is PagerAdapter.PagerState.InitialLoad
+private val PagerState.shouldShowBottomLoadingCircle: Boolean get() =
+    this is PagerState.LoadingAtEnd || this is PagerState.InitialLoad
