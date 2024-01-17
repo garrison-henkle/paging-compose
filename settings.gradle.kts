@@ -15,5 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-include(":shared")
+include(":paging")
 include(":exampleAndroid")

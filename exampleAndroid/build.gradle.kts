@@ -50,7 +50,7 @@ android {
 }
 
 dependencies {
-    implementation(project(":shared"))
+    implementation(project(":paging"))
     implementation(compose.foundation)
     implementation(compose.material)
     implementation(compose.runtime)
