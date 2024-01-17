@@ -133,8 +133,8 @@ private const val PAGER_BOT_LOADING_CIRCLE_KEY = "pagerBotLoadingCircleKey"
 
 private fun Dp.px(density: Density): Int = with(density){ roundToPx() }
 
-private val PagerAdapter.PagerState.shouldShowTopLoadingCircle: Boolean get() =
-    this is PagerAdapter.PagerState.LoadingAtStart
+private val PagerState.shouldShowTopLoadingCircle: Boolean get() =
+    this is PagerState.LoadingAtStart
 
-private val PagerAdapter.PagerState.shouldShowBottomLoadingCircle: Boolean get() =
-    this is PagerAdapter.PagerState.LoadingAtEnd || this is PagerAdapter.PagerState.InitialLoad
+private val PagerState.shouldShowBottomLoadingCircle: Boolean get() =
+    this is PagerState.LoadingAtEnd || this is PagerState.InitialLoad
