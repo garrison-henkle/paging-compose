@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import dev.henkle.compose.paging.PagedLazyColumn
+import dev.henkle.compose.paging.TransformedData
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -23,6 +24,34 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val exampleData = List(10_000) { it.toString() }
+        val pageSize = 15
+        val maxPages = 3
+
+        val transform: (
+            pages: IntRange,
+            data: List<String>,
+        ) -> TransformedData<String> = transform@{ pages, items ->
+            if (pages.isEmpty()) return@transform TransformedData(items = items)
+
+            val data: MutableList<String> = items.toMutableList()
+            val fullPages = data.size / pageSize
+            val partialPage = data.size % pageSize != 0
+            val sectionCount = if (partialPage) fullPages + 1 else fullPages - 1
+            val lastSectionIndex = sectionCount * pageSize
+
+            var currentPage = pages.last + 1
+            for (index in lastSectionIndex downTo 0 step pageSize) {
+                data.add(index, "Start of page $currentPage")
+                currentPage -= 1
+            }
+
+            val sizeChange = sectionCount.coerceAtLeast(0)
+            TransformedData(
+                items = data,
+                totalSizeChange = sizeChange,
+                pageSizeChanges = List(size = sizeChange) { 1 },
+            )
+        }
 
         setContent {
             Column(
@@ -37,9 +66,10 @@ class MainActivity : ComponentActivity() {
                             .fillMaxWidth()
                             .weight(1f),
                     loadingCirclesEnabled = true,
-                    pageSize = 15,
-                    maxPages = 5,
+                    pageSize = pageSize,
+                    maxPages = maxPages,
                     key = { it },
+                    transform = transform,
                     fetch = { offset, pageSize ->
                         delay(500)
                         when {
@@ -77,10 +107,11 @@ class MainActivity : ComponentActivity() {
                             .fillMaxWidth()
                             .weight(1f),
                     loadingCirclesEnabled = true,
-                    pageSize = 15,
-                    maxPages = 3,
+                    pageSize = pageSize,
+                    maxPages = maxPages,
                     key = { it },
                     getID = { it },
+                    transform = transform,
                     fetch = { lastID, pageSize ->
                         delay(500)
                         val index =
