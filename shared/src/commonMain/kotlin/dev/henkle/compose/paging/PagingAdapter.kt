@@ -170,13 +170,24 @@ internal class IDPagerAdapter<T>(
         val currentPages = pages.value.toMutableList()
 
         cache[page]?.also { cachedPage ->
+            val invalidLastID =
+                !isValidPageLoad(
+                    lastID = cachedPage.previousPageLastID,
+                    currentPages = currentPages,
+                    thorough = enableThoroughSafetyCheck,
+                )
+            if (invalidLastID) return
+
             val newPageData = fetch(cachedPage.previousPageLastID, pageSize)
-            currentPages +=
+            currentPages.add(
+                0,
                 Page.IDPage(
                     page = page,
                     previousPageLastID = cachedPage.previousPageLastID,
                     size = pageSize, data = newPageData,
-                )
+                ),
+            )
+
             cachedPage.setIds(ids = newPageData.map(getID))
 
             if (currentPages.size >= maxPages) {
@@ -205,7 +216,14 @@ internal class IDPagerAdapter<T>(
     override suspend fun loadPageAtEnd(page: Int) {
         val currentPages = pages.value.toMutableList()
 
-        val lastID = currentPages.lastOrNull()?.takeIf { it.isFull }?.previousPageLastID ?: return
+        val lastID =
+            currentPages
+                .lastOrNull()
+                ?.takeIf { it.isFull }
+                ?.data?.lastOrNull()
+                ?.let(getID)
+                ?: return
+
         val invalidLastID =
             !isValidPageLoad(
                 lastID = lastID,
@@ -223,6 +241,10 @@ internal class IDPagerAdapter<T>(
             val removedPage = currentPages.removeFirst().page
             cache[removedPage]?.clear()
         }
+
+        pages.value = currentPages
+
+        _state.value = PagerState.Idle
     }
 
     override suspend fun initialLoad(
@@ -252,7 +274,7 @@ internal class IDPagerAdapter<T>(
     }
 
     private fun isValidPageLoad(
-        lastID: String,
+        lastID: String?,
         currentPages: List<Page.IDPage<T>>,
         thorough: Boolean,
     ): Boolean {
@@ -273,6 +295,16 @@ internal class IDPagerAdapter<T>(
 
         fun setIds(ids: List<String>) {
             _ids += ids
+        }
+
+        override fun toString(): String {
+            val builder = StringBuilder()
+            builder.append("PageCache(")
+            builder.append("previousPageLastID=$previousPageLastID")
+            builder.append(',')
+            builder.append("ids=$ids")
+            builder.append(')')
+            return builder.toString()
         }
     }
 }
