@@ -12,7 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,7 +26,7 @@ import kotlinx.coroutines.flow.map
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
-fun <T> PagedLazyColumn(
+fun <DataType, DisplayType> PagedLazyColumn(
     modifier: Modifier,
     pageSize: Int = 25,
     maxPages: Int = 9,
@@ -39,9 +38,10 @@ fun <T> PagedLazyColumn(
     loadingCircleColor: Color = Color.Blue,
     loadingCircleSize: Dp = 48.dp,
     loadingCircleStrokeWidth: Dp = 3.dp,
-    key: (T) -> Any,
-    fetch: suspend (offset: Int, pageSize: Int) -> List<T>,
-    content: @Composable LazyItemScope.(item: T) -> Unit,
+    key: (DisplayType) -> Any,
+    transform: (pages: IntRange, items: List<DataType>) -> TransformedData<DisplayType>,
+    fetch: suspend (offset: Int, pageSize: Int) -> List<DataType>,
+    content: @Composable LazyItemScope.(item: DisplayType) -> Unit,
 ) {
     val pager =
         rememberPager(
@@ -49,6 +49,7 @@ fun <T> PagedLazyColumn(
             initialPagePreloadCount = initialPagePreloadCount,
             maxPages = maxPages,
             startPage = startPage,
+            transform = transform,
             fetch = fetch,
         )
     val pagerData by pager.data.collectAsState()
@@ -69,7 +70,7 @@ fun <T> PagedLazyColumn(
             }
         }
 
-        items(items = pagerData, key = key, itemContent = content)
+        items(items = pagerData.items, key = key, itemContent = content)
 
         item(key = PAGER_BOT_LOADING_CIRCLE_KEY) {
             if (loadingCirclesEnabled && pagerState.shouldShowBottomLoadingCircle) {
@@ -87,15 +88,15 @@ fun <T> PagedLazyColumn(
     // current visible item in place.
     val density = LocalDensity.current
     LaunchedEffect(pagerData) {
-        var lastFirstItem = pagerData.firstOrNull()
+        var lastFirstItem = pagerData.items.firstOrNull()
         snapshotFlow { pagerData }
             .distinctUntilChanged()
-            .map { it.firstOrNull() }
-            .collect { newFirstItem ->
+            .map { (it.pageSizeChanges.firstOrNull() ?: 0) to it.items.firstOrNull() }
+            .collect { (newPageTransformAddedItemAdjustment, newFirstItem) ->
                 if (lastFirstItem != newFirstItem) {
                     if (!state.canScrollBackward && lastFirstItem != null) {
                         state.scrollToItem(
-                            index = pageSize + 1,
+                            index = pageSize + 1 + newPageTransformAddedItemAdjustment,
                             scrollOffset = if (loadingCirclesEnabled) -loadingCircleSize.px(density) else 0,
                         )
                     }
@@ -114,7 +115,7 @@ fun <T> PagedLazyColumn(
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
-fun <T> PagedLazyColumn(
+fun <DataType, DisplayType> PagedLazyColumn(
     modifier: Modifier,
     pageSize: Int = 25,
     maxPages: Int = 9,
@@ -126,10 +127,11 @@ fun <T> PagedLazyColumn(
     loadingCircleColor: Color = Color.Blue,
     loadingCircleSize: Dp = 48.dp,
     loadingCircleStrokeWidth: Dp = 3.dp,
-    key: (T) -> Any,
-    getID: (T) -> String,
-    fetch: suspend (lastID: String?, pageSize: Int) -> List<T>,
-    content: @Composable LazyItemScope.(item: T) -> Unit,
+    key: (DisplayType) -> Any,
+    getID: (DataType) -> String,
+    transform: (pages: IntRange, items: List<DataType>) -> TransformedData<DisplayType>,
+    fetch: suspend (lastID: String?, pageSize: Int) -> List<DataType>,
+    content: @Composable LazyItemScope.(item: DisplayType) -> Unit,
 ) {
     val pager =
         rememberPager(
@@ -138,6 +140,7 @@ fun <T> PagedLazyColumn(
             maxPages = maxPages,
             thoroughSafetyCheck = thoroughSafetyCheck,
             getID = getID,
+            transform = transform,
             fetch = fetch,
         )
     val pagerData by pager.data.collectAsState()
@@ -158,7 +161,7 @@ fun <T> PagedLazyColumn(
             }
         }
 
-        items(items = pagerData, key = key, itemContent = content)
+        items(items = pagerData.items, key = key, itemContent = content)
 
         item(key = PAGER_BOT_LOADING_CIRCLE_KEY) {
             if (loadingCirclesEnabled && pagerState.shouldShowBottomLoadingCircle) {
@@ -176,15 +179,15 @@ fun <T> PagedLazyColumn(
     // current visible item in place.
     val density = LocalDensity.current
     LaunchedEffect(pagerData) {
-        var lastFirstItem = pagerData.firstOrNull()
+        var lastFirstItem = pagerData.items.firstOrNull()
         snapshotFlow { pagerData }
             .distinctUntilChanged()
-            .map { it.firstOrNull() }
-            .collect { newFirstItem ->
+            .map { (it.pageSizeChanges.firstOrNull() ?: 0) to it.items.firstOrNull() }
+            .collect { (newPageTransformAddedItemAdjustment, newFirstItem) ->
                 if (lastFirstItem != newFirstItem) {
                     if (!state.canScrollBackward && lastFirstItem != null) {
                         state.scrollToItem(
-                            index = pageSize + 1,
+                            index = pageSize + 1 + newPageTransformAddedItemAdjustment,
                             scrollOffset = if (loadingCirclesEnabled) -loadingCircleSize.px(density) else 0,
                         )
                     }

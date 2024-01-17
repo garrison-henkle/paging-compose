@@ -17,14 +17,15 @@ import kotlinx.coroutines.flow.map
 import kotlin.math.roundToInt
 
 @Composable
-fun <T> rememberPager(
+fun <T, R> rememberPager(
     pageSize: Int = 50,
     maxPages: Int = 9,
     initialPagePreloadCount: Int = 2,
     thoroughSafetyCheck: Boolean = false,
-    getID: (T) -> String,
+    getID: (item: T) -> String,
+    transform: (pages: IntRange, items: List<T>) -> TransformedData<R>,
     fetch: suspend (lastID: String?, pageSize: Int) -> List<T>,
-): PagerAdapter<T> {
+): PagerAdapter<R> {
     val scope = rememberCoroutineScope { Dispatchers.Default }
     val pager =
         remember {
@@ -35,6 +36,7 @@ fun <T> rememberPager(
                 scope = scope,
                 enableThoroughSafetyCheck = thoroughSafetyCheck,
                 getID = getID,
+                transform = transform,
                 fetch = fetch,
             )
         }
@@ -48,13 +50,14 @@ fun <T> rememberPager(
 }
 
 @Composable
-fun <T> rememberPager(
+fun <T, R> rememberPager(
     pageSize: Int = 50,
     maxPages: Int = 9,
     initialPagePreloadCount: Int = 2,
     startPage: Int = 0,
+    transform: (pages: IntRange, items: List<T>) -> TransformedData<R>,
     fetch: suspend (offset: Int, pageSize: Int) -> List<T>,
-): PagerAdapter<T> {
+): PagerAdapter<R> {
     val scope = rememberCoroutineScope { Dispatchers.Default }
     val pager =
         remember {
@@ -64,6 +67,7 @@ fun <T> rememberPager(
                 pagePreloadCount = initialPagePreloadCount,
                 startPage = startPage,
                 scope = scope,
+                transform = transform,
                 fetch = fetch,
             )
         }
@@ -92,8 +96,8 @@ fun <T> registerForPagingEvents(
             val scrollingDown = first > lastFirstIndex
             val last = first + count
             val threshold = loadThreshold ?: (loadThresholdPercent * pager.pageSize).roundToInt()
-            val approachingTop = first < threshold && data.size >= pager.pageSize
-            val approachingBottom = scrollingDown && last > (data.size - threshold) && data.size >= pager.pageSize
+            val approachingTop = first < threshold && data.items.size >= pager.pageSize
+            val approachingBottom = scrollingDown && last > (data.items.size - threshold) && data.items.size >= pager.pageSize
             lastFirstIndex = first
             approachingTop to approachingBottom
         }.distinctUntilChanged().collect { (approachingTop, approachingBottom) ->

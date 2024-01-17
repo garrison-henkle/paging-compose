@@ -19,12 +19,12 @@ typealias PageNumber = Int
  * A paging adapter for a datasource.
  *
  * @property pageSize The size of each page.
- * @property data The data to present
+ * @property data The data to present and the number of items added or removed by the transform
  * @property state The current state of paging operations
  */
 interface PagerAdapter<T> {
     val pageSize: Int
-    val data: StateFlow<List<T>>
+    val data: StateFlow<TransformedData<T>>
     val state: StateFlow<PagerState>
 
     /**
@@ -48,17 +48,18 @@ interface PagerAdapter<T> {
     suspend fun loadPrevious()
 }
 
-internal abstract class BasePagerAdapter<T, P : Page<T>>(
+internal abstract class BasePagerAdapter<T, R, P : Page<T>>(
     startPage: Int,
     pagePreloadCount: Int,
     private val scope: CoroutineScope,
-) : PagerAdapter<T> {
+    protected val transform: (pages: IntRange, items: List<T>) -> TransformedData<R>,
+) : PagerAdapter<R> {
     private val actorChannel = Channel<PagerAction>(capacity = 10)
     private val actor: SendChannel<PagerAction> = actorChannel
 
-    protected val pages = MutableStateFlow<List<P>>(emptyList())
+    protected val pages = MutableStateFlow(emptyList<P>())
 
-    private val _data = MutableStateFlow<List<T>>(emptyList())
+    private val _data = MutableStateFlow(TransformedData(emptyList<R>()))
     override val data = _data.asStateFlow()
 
     @Suppress("ktlint:standard:property-naming")
@@ -100,8 +101,19 @@ internal abstract class BasePagerAdapter<T, P : Page<T>>(
     override fun startFlows() {
         scope.launch {
             pages
-                .map { it.map { page -> page.data }.flatten() }
-                .collect { data -> _data.value = data }
+                .map { pages ->
+                    val flattenedPageData = pages.map { page -> page.data }.flatten()
+                    val pageNumbers =
+                        pages.firstOrNull()?.page?.let { firstPageNumber ->
+                            pages.lastOrNull()?.page?.let { lastPageNumber ->
+                                firstPageNumber..lastPageNumber
+                            }
+                        } ?: IntRange.EMPTY
+                    pageNumbers to flattenedPageData
+                }
+                .collect { (pages, data) ->
+                    _data.value = transform(pages, data)
+                }
         }
     }
 
@@ -151,18 +163,20 @@ internal abstract class BasePagerAdapter<T, P : Page<T>>(
  * list.
  */
 @Suppress("UnnecessaryVariable")
-internal class IDPagerAdapter<T>(
+internal class IDPagerAdapter<T, R>(
     override val pageSize: Int = 50,
     private val maxPages: Int = 9,
     pagePreloadCount: Int = 2,
     scope: CoroutineScope,
     private val enableThoroughSafetyCheck: Boolean = false,
     private val getID: (T) -> String,
+    transform: (pages: IntRange, items: List<T>) -> TransformedData<R>,
     private val fetch: suspend (lastID: String?, pageSize: Int) -> List<T>,
-) : BasePagerAdapter<T, Page.IDPage<T>>(
+) : BasePagerAdapter<T, R, Page.IDPage<T>>(
         startPage = 0,
         pagePreloadCount = pagePreloadCount,
         scope = scope,
+        transform = transform,
     ) {
     private val cache = hashMapOf<PageNumber, PageCache>()
 
@@ -177,6 +191,8 @@ internal class IDPagerAdapter<T>(
                     thorough = enableThoroughSafetyCheck,
                 )
             if (invalidLastID) return
+
+            _state.value = PagerState.LoadingAtStart
 
             val newPageData = fetch(cachedPage.previousPageLastID, pageSize)
             currentPages.add(
@@ -325,17 +341,19 @@ internal class IDPagerAdapter<T>(
  * page. If the datasource is unable to fetch any data at the given offset, is should return an
  * empty list.
  */
-internal class OffsetPagerAdapter<T>(
+internal class OffsetPagerAdapter<T, R>(
     override val pageSize: Int = 50,
     private val maxPages: Int = 9,
     pagePreloadCount: Int = 2,
     startPage: Int = 0,
     scope: CoroutineScope,
+    transform: (pages: IntRange, items: List<T>) -> TransformedData<R>,
     private val fetch: suspend (offset: Int, pageSize: Int) -> List<T>,
-) : BasePagerAdapter<T, Page.OffsetPage<T>>(
+) : BasePagerAdapter<T, R, Page.OffsetPage<T>>(
         startPage = startPage,
         pagePreloadCount = pagePreloadCount,
         scope = scope,
+        transform = transform,
     ) {
     override suspend fun loadPageAtStart(page: Int) {
         val currentPages = pages.value.toMutableList()
