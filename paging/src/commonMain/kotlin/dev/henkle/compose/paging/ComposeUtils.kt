@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.map
 import kotlin.math.roundToInt
 
 @Composable
+fun <T> rememberPagedLazyColumnController(): PagedLazyColumnController<T> = remember { PagedLazyColumnController() }
+
+@Composable
 fun <T, R, ID : Any> rememberPager(
     pageSize: Int = 50,
     maxPages: Int = 9,
@@ -26,7 +29,7 @@ fun <T, R, ID : Any> rememberPager(
     transform: (pages: IntRange, items: List<T>) -> TransformedData<R>,
     fetch: suspend (lastID: ID?, pageSize: Int) -> List<T>,
 ): PagerAdapter<R> {
-    val scope = rememberCoroutineScope { Dispatchers.Default }
+    val scope = rememberCoroutineScope { Dispatchers.Main }
     val pager =
         remember {
             IDPagerAdapter(
@@ -58,7 +61,7 @@ fun <T, R> rememberPager(
     transform: (pages: IntRange, items: List<T>) -> TransformedData<R>,
     fetch: suspend (offset: Int, pageSize: Int) -> List<T>,
 ): PagerAdapter<R> {
-    val scope = rememberCoroutineScope { Dispatchers.Default }
+    val scope = rememberCoroutineScope { Dispatchers.Main }
     val pager =
         remember {
             OffsetPagerAdapter(
