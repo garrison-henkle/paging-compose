@@ -6,24 +6,31 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Button
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import dev.henkle.compose.paging.PagedLazyColumn
 import dev.henkle.compose.paging.TransformedData
+import dev.henkle.compose.paging.rememberPagedLazyColumnController
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val exampleData = List(10_000) { it.toString() }
+        val exampleData = MutableList(10_000) { it.toString() }
         val pageSize = 15
         val maxPages = 3
 
@@ -54,6 +61,9 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
+            val controller = rememberPagedLazyColumnController<String>()
+            val scope = rememberCoroutineScope { Dispatchers.Main }
+
             Column(
                 modifier =
                     Modifier
@@ -65,6 +75,7 @@ class MainActivity : ComponentActivity() {
                         Modifier
                             .fillMaxWidth()
                             .weight(1f),
+                    controller = controller,
                     loadingCirclesEnabled = true,
                     pageSize = pageSize,
                     maxPages = maxPages,
@@ -147,6 +158,29 @@ class MainActivity : ComponentActivity() {
                         ) {
                             Text(text = text)
                         }
+                    }
+                }
+
+                Button(
+                    modifier =
+                        Modifier
+                            .padding(horizontal = 10.dp)
+                            .height(height = 48.dp)
+                            .fillMaxWidth(),
+                    onClick = {
+                        scope.launch {
+                            for (i in -1 downTo -10) {
+                                exampleData.add(0, i.toString())
+                            }
+                            controller.reset()
+                        }
+                    },
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("Refresh")
                     }
                 }
             }

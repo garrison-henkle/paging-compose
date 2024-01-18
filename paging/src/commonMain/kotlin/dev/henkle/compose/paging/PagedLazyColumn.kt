@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,6 +50,7 @@ fun <DataType, DisplayType> PagedLazyColumn(
     horizontalAlignment: Alignment.Horizontal = Alignment.Start,
     flingBehavior: FlingBehavior = ScrollableDefaults.flingBehavior(),
     userScrollEnabled: Boolean = true,
+    controller: PagedLazyColumnController<DisplayType>? = null,
     key: (DisplayType) -> Any,
     transform: (pages: IntRange, items: List<DataType>) -> TransformedData<DisplayType>,
     fetch: suspend (offset: Int, pageSize: Int) -> List<DataType>,
@@ -66,6 +68,13 @@ fun <DataType, DisplayType> PagedLazyColumn(
     val pagerData by pager.data.collectAsState()
     val pagerState by pager.state.collectAsState()
     val state = rememberLazyListState()
+
+    DisposableEffect(controller) {
+        controller?.bind(pager)
+        onDispose {
+            controller?.unbind()
+        }
+    }
 
     LazyColumn(
         modifier = modifier,
@@ -151,6 +160,7 @@ fun <DataType, DisplayType, ID : Any> PagedLazyColumn(
     horizontalAlignment: Alignment.Horizontal = Alignment.Start,
     flingBehavior: FlingBehavior = ScrollableDefaults.flingBehavior(),
     userScrollEnabled: Boolean = true,
+    controller: PagedLazyColumnController<DisplayType>? = null,
     key: (DisplayType) -> Any,
     getID: (DataType) -> ID,
     transform: (pages: IntRange, items: List<DataType>) -> TransformedData<DisplayType>,
@@ -170,6 +180,13 @@ fun <DataType, DisplayType, ID : Any> PagedLazyColumn(
     val pagerData by pager.data.collectAsState()
     val pagerState by pager.state.collectAsState()
     val state = rememberLazyListState()
+
+    DisposableEffect(controller) {
+        controller?.bind(pager)
+        onDispose {
+            controller?.unbind()
+        }
+    }
 
     LazyColumn(
         modifier = modifier,
@@ -263,4 +280,4 @@ private val PagerState.shouldShowTopLoadingCircle: Boolean get() =
     this is PagerState.LoadingAtStart
 
 private val PagerState.shouldShowBottomLoadingCircle: Boolean get() =
-    this is PagerState.LoadingAtEnd || this is PagerState.InitialLoad
+    this is PagerState.LoadingAtEnd || this is PagerState.Refresh

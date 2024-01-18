@@ -48,6 +48,7 @@ kotlin {
                 implementation(compose.runtime)
                 implementation(libs.kermit)
                 implementation(libs.kotlinxCoroutinesCore)
+                implementation(libs.uuid)
             }
         }
     }

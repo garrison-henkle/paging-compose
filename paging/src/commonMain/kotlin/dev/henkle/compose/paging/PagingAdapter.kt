@@ -3,6 +3,7 @@
 package dev.henkle.compose.paging
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 typealias PageNumber = Int
 
@@ -26,6 +28,11 @@ interface PagerAdapter<T> {
     val pageSize: Int
     val data: StateFlow<TransformedData<T>>
     val state: StateFlow<PagerState>
+
+    /**
+     * Refreshes the pager by loading new data
+     */
+    fun reset()
 
     /**
      * Begins population of the [data] output flow from the paged data
@@ -49,8 +56,8 @@ interface PagerAdapter<T> {
 }
 
 internal abstract class BasePagerAdapter<T, R, P : Page<T>>(
-    startPage: Int,
-    pagePreloadCount: Int,
+    private val startPage: Int,
+    private val pagePreloadCount: Int,
     private val scope: CoroutineScope,
     protected val transform: (pages: IntRange, items: List<T>) -> TransformedData<R>,
 ) : PagerAdapter<R> {
@@ -70,7 +77,7 @@ internal abstract class BasePagerAdapter<T, R, P : Page<T>>(
         startActor()
         scope.launch {
             actor.send(
-                PagerAction.InitialLoad(
+                PagerAction.Refresh(
                     startPage = startPage,
                     pagePreloadCount = pagePreloadCount,
                 ),
@@ -88,13 +95,19 @@ internal abstract class BasePagerAdapter<T, R, P : Page<T>>(
                             PageLocation.End -> loadPageAtEnd(page = action.page)
                         }
                     }
-                    is PagerAction.InitialLoad ->
-                        initialLoad(
+                    is PagerAction.Refresh ->
+                        refresh(
                             startPage = action.startPage,
                             pagePreloadCount = action.pagePreloadCount,
                         )
                 }
             }
+        }
+    }
+
+    override fun reset() {
+        scope.launch {
+            refresh(startPage = startPage, pagePreloadCount = pagePreloadCount)
         }
     }
 
@@ -135,7 +148,7 @@ internal abstract class BasePagerAdapter<T, R, P : Page<T>>(
         actor.send(PagerAction.LoadPage(page = pageToLoad, location = PageLocation.Start))
     }
 
-    abstract suspend fun initialLoad(
+    abstract suspend fun refresh(
         startPage: Int,
         pagePreloadCount: Int,
     )
@@ -211,12 +224,14 @@ internal class IDPagerAdapter<T, R, ID : Any>(
                 cache[lastPage.page]?.clear()
             }
 
-            pages.value = currentPages
+            withContext(Dispatchers.Main) {
+                pages.value = currentPages
 
-            _state.value = PagerState.Idle
+                _state.value = PagerState.Idle
+            }
         } ?: run {
             if (page == 0) {
-                initialLoad(startPage = 0, pagePreloadCount = 0)
+                refresh(startPage = 0, pagePreloadCount = 0)
             } else {
                 // TODO: determine what to do when a non-0 page is not found in the cache. Options:
                 //  1. start a while loop that keeps adding new pages until it finds a lastID that
@@ -258,18 +273,20 @@ internal class IDPagerAdapter<T, R, ID : Any>(
             cache[removedPage]?.clear()
         }
 
-        pages.value = currentPages
+        withContext(Dispatchers.Main) {
+            pages.value = currentPages
 
-        _state.value = PagerState.Idle
+            _state.value = PagerState.Idle
+        }
     }
 
-    override suspend fun initialLoad(
+    override suspend fun refresh(
         startPage: Int,
         pagePreloadCount: Int,
     ) {
-        val currentPages = pages.value.toMutableList()
+        val currentPages = mutableListOf<Page.IDPage<T, ID>>()
 
-        _state.value = PagerState.InitialLoad
+        _state.value = PagerState.Refresh
 
         var lastID: ID? = null
         var newPageData: List<T>
@@ -284,9 +301,11 @@ internal class IDPagerAdapter<T, R, ID : Any>(
             lastID = getID(newPage.data.last())
         }
 
-        pages.value = currentPages
+        withContext(Dispatchers.Main) {
+            pages.value = currentPages
 
-        _state.value = PagerState.Idle
+            _state.value = PagerState.Idle
+        }
     }
 
     private fun isValidPageLoad(
@@ -368,9 +387,11 @@ internal class OffsetPagerAdapter<T, R>(
         if (currentPages.size >= maxPages) {
             currentPages.removeLast()
         }
-        pages.value = currentPages
+        withContext(Dispatchers.Main) {
+            pages.value = currentPages
 
-        _state.value = PagerState.Idle
+            _state.value = PagerState.Idle
+        }
     }
 
     override suspend fun loadPageAtEnd(page: Int) {
@@ -387,18 +408,21 @@ internal class OffsetPagerAdapter<T, R>(
         if (currentPages.size >= maxPages) {
             currentPages.removeFirst()
         }
-        pages.value = currentPages
 
-        _state.value = PagerState.Idle
+        withContext(Dispatchers.Main) {
+            pages.value = currentPages
+
+            _state.value = PagerState.Idle
+        }
     }
 
-    override suspend fun initialLoad(
+    override suspend fun refresh(
         startPage: Int,
         pagePreloadCount: Int,
     ) {
-        val currentPages = pages.value.toMutableList()
+        val currentPages = mutableListOf<Page.OffsetPage<T>>()
 
-        _state.value = PagerState.InitialLoad
+        _state.value = PagerState.Refresh
 
         var nextOffset = startPage * pageSize
         var newPageData: List<T>
@@ -422,8 +446,10 @@ internal class OffsetPagerAdapter<T, R>(
             currentPages.add(0, newPage)
         }
 
-        pages.value = currentPages
+        withContext(Dispatchers.Main) {
+            pages.value = currentPages
 
-        _state.value = PagerState.Idle
+            _state.value = PagerState.Idle
+        }
     }
 }
