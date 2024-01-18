@@ -13,9 +13,9 @@ sealed interface Page<T> {
         override val data: List<T>,
     ) : Page<T>
 
-    data class IDPage<T>(
+    data class IDPage<T, ID>(
         override val page: Int,
-        val previousPageLastID: String?,
+        val previousPageLastID: ID?,
         override val size: Int,
         override val data: List<T>,
     ) : Page<T>

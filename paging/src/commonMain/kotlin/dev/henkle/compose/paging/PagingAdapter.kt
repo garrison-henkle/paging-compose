@@ -163,22 +163,22 @@ internal abstract class BasePagerAdapter<T, R, P : Page<T>>(
  * list.
  */
 @Suppress("UnnecessaryVariable")
-internal class IDPagerAdapter<T, R>(
+internal class IDPagerAdapter<T, R, ID : Any>(
     override val pageSize: Int = 50,
     private val maxPages: Int = 9,
     pagePreloadCount: Int = 2,
     scope: CoroutineScope,
     private val enableThoroughSafetyCheck: Boolean = false,
-    private val getID: (T) -> String,
+    private val getID: (T) -> ID,
     transform: (pages: IntRange, items: List<T>) -> TransformedData<R>,
-    private val fetch: suspend (lastID: String?, pageSize: Int) -> List<T>,
-) : BasePagerAdapter<T, R, Page.IDPage<T>>(
+    private val fetch: suspend (lastID: ID?, pageSize: Int) -> List<T>,
+) : BasePagerAdapter<T, R, Page.IDPage<T, ID>>(
         startPage = 0,
         pagePreloadCount = pagePreloadCount,
         scope = scope,
         transform = transform,
     ) {
-    private val cache = hashMapOf<PageNumber, PageCache>()
+    private val cache = hashMapOf<PageNumber, PageCache<ID>>()
 
     override suspend fun loadPageAtStart(page: Int) {
         val currentPages = pages.value.toMutableList()
@@ -271,9 +271,9 @@ internal class IDPagerAdapter<T, R>(
 
         _state.value = PagerState.InitialLoad
 
-        var lastID: String? = null
+        var lastID: ID? = null
         var newPageData: List<T>
-        var newPage: Page.IDPage<T>
+        var newPage: Page.IDPage<T, ID>
 
         for (i in 0..pagePreloadCount) {
             newPageData = fetch(lastID, pageSize)
@@ -290,8 +290,8 @@ internal class IDPagerAdapter<T, R>(
     }
 
     private fun isValidPageLoad(
-        lastID: String?,
-        currentPages: List<Page.IDPage<T>>,
+        lastID: ID?,
+        currentPages: List<Page.IDPage<T, ID>>,
         thorough: Boolean,
     ): Boolean {
         val pageAlreadyLoaded = currentPages.any { it.previousPageLastID == lastID }
@@ -301,15 +301,15 @@ internal class IDPagerAdapter<T, R>(
         return newIDNotInExistingPages
     }
 
-    class PageCache(val previousPageLastID: String?, ids: List<String>) {
+    class PageCache<ID>(val previousPageLastID: ID?, ids: List<ID>) {
         private val _ids = ids.toMutableList()
-        val ids: List<String> = _ids
+        val ids: List<ID> = _ids
 
         fun clear() {
             _ids.clear()
         }
 
-        fun setIds(ids: List<String>) {
+        fun setIds(ids: List<ID>) {
             _ids += ids
         }
 

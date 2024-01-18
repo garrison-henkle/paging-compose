@@ -17,14 +17,14 @@ import kotlinx.coroutines.flow.map
 import kotlin.math.roundToInt
 
 @Composable
-fun <T, R> rememberPager(
+fun <T, R, ID : Any> rememberPager(
     pageSize: Int = 50,
     maxPages: Int = 9,
     initialPagePreloadCount: Int = 2,
     thoroughSafetyCheck: Boolean = false,
-    getID: (item: T) -> String,
+    getID: (item: T) -> ID,
     transform: (pages: IntRange, items: List<T>) -> TransformedData<R>,
-    fetch: suspend (lastID: String?, pageSize: Int) -> List<T>,
+    fetch: suspend (lastID: ID?, pageSize: Int) -> List<T>,
 ): PagerAdapter<R> {
     val scope = rememberCoroutineScope { Dispatchers.Default }
     val pager =
