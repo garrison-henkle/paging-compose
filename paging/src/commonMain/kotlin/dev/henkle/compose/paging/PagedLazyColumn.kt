@@ -115,7 +115,7 @@ fun <DataType, DisplayType> PagedLazyColumn(
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
-fun <DataType, DisplayType> PagedLazyColumn(
+fun <DataType, DisplayType, ID : Any> PagedLazyColumn(
     modifier: Modifier,
     pageSize: Int = 25,
     maxPages: Int = 9,
@@ -128,9 +128,9 @@ fun <DataType, DisplayType> PagedLazyColumn(
     loadingCircleSize: Dp = 48.dp,
     loadingCircleStrokeWidth: Dp = 3.dp,
     key: (DisplayType) -> Any,
-    getID: (DataType) -> String,
+    getID: (DataType) -> ID,
     transform: (pages: IntRange, items: List<DataType>) -> TransformedData<DisplayType>,
-    fetch: suspend (lastID: String?, pageSize: Int) -> List<DataType>,
+    fetch: suspend (lastID: ID?, pageSize: Int) -> List<DataType>,
     content: @Composable LazyItemScope.(item: DisplayType) -> Unit,
 ) {
     val pager =
