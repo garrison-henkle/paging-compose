@@ -1,6 +1,10 @@
 package dev.henkle.compose.paging
 
+import androidx.compose.foundation.gestures.FlingBehavior
+import androidx.compose.foundation.gestures.ScrollableDefaults
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,6 +42,13 @@ fun <DataType, DisplayType> PagedLazyColumn(
     loadingCircleColor: Color = Color.Blue,
     loadingCircleSize: Dp = 48.dp,
     loadingCircleStrokeWidth: Dp = 3.dp,
+    contentPadding: PaddingValues = PaddingValues(all = 0.dp),
+    reverseLayout: Boolean = false,
+    verticalArrangement: Arrangement.Vertical =
+        if (!reverseLayout) Arrangement.Top else Arrangement.Bottom,
+    horizontalAlignment: Alignment.Horizontal = Alignment.Start,
+    flingBehavior: FlingBehavior = ScrollableDefaults.flingBehavior(),
+    userScrollEnabled: Boolean = true,
     key: (DisplayType) -> Any,
     transform: (pages: IntRange, items: List<DataType>) -> TransformedData<DisplayType>,
     fetch: suspend (offset: Int, pageSize: Int) -> List<DataType>,
@@ -59,6 +70,12 @@ fun <DataType, DisplayType> PagedLazyColumn(
     LazyColumn(
         modifier = modifier,
         state = state,
+        contentPadding = contentPadding,
+        reverseLayout = reverseLayout,
+        verticalArrangement = verticalArrangement,
+        horizontalAlignment = horizontalAlignment,
+        flingBehavior = flingBehavior,
+        userScrollEnabled = userScrollEnabled,
     ) {
         item(key = PAGER_TOP_LOADING_CIRCLE_KEY) {
             if (loadingCirclesEnabled && pagerState.shouldShowTopLoadingCircle) {
@@ -127,6 +144,13 @@ fun <DataType, DisplayType, ID : Any> PagedLazyColumn(
     loadingCircleColor: Color = Color.Blue,
     loadingCircleSize: Dp = 48.dp,
     loadingCircleStrokeWidth: Dp = 3.dp,
+    contentPadding: PaddingValues = PaddingValues(all = 0.dp),
+    reverseLayout: Boolean = false,
+    verticalArrangement: Arrangement.Vertical =
+        if (!reverseLayout) Arrangement.Top else Arrangement.Bottom,
+    horizontalAlignment: Alignment.Horizontal = Alignment.Start,
+    flingBehavior: FlingBehavior = ScrollableDefaults.flingBehavior(),
+    userScrollEnabled: Boolean = true,
     key: (DisplayType) -> Any,
     getID: (DataType) -> ID,
     transform: (pages: IntRange, items: List<DataType>) -> TransformedData<DisplayType>,
@@ -150,6 +174,12 @@ fun <DataType, DisplayType, ID : Any> PagedLazyColumn(
     LazyColumn(
         modifier = modifier,
         state = state,
+        contentPadding = contentPadding,
+        reverseLayout = reverseLayout,
+        verticalArrangement = verticalArrangement,
+        horizontalAlignment = horizontalAlignment,
+        flingBehavior = flingBehavior,
+        userScrollEnabled = userScrollEnabled,
     ) {
         item(key = PAGER_TOP_LOADING_CIRCLE_KEY) {
             if (loadingCirclesEnabled && pagerState.shouldShowTopLoadingCircle) {
