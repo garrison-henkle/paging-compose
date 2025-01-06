@@ -1,3 +1,6 @@
+> [!CAUTION]
+> This library has been moved to [this directory](https://github.com/garrison-henkle/kmp-libraries/tree/dev/pager) of my KMP monorepo at https://github.com/garrison-henkle/kmp-libraries
+
 # Paging Compose
 A simple paging library for Jetpack Compose and Compose Multiplatform. This was hacked together in
 the middle of the night, so expect small bugs :).
